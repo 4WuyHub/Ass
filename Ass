@@ -1,0 +1,226 @@
+--// RAYFIELD - 150 SAVED TP + INDIVIDUAL DELAYS + AUTO TP + AUTO REBIRTH
+--// TP Slots: 1 - 150
+--// Each TP slot has its own delay.
+--// Auto TP runs in numerical order and skips empty slots.
+--// Rebirth tab includes manual rebirth + auto rebirth with customizable delay.
+
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+
+--==================================================
+-- WINDOW
+--==================================================
+
+local Window = Rayfield:CreateWindow({
+    Name = "150 TP Macro",
+    LoadingTitle = "150 Saved Teleports",
+    LoadingSubtitle = "TP + Rebirth Macro",
+    ConfigurationSaving = {
+        Enabled = false
+    }
+})
+
+local TP_Tab = Window:CreateTab("Teleport", 4483362458)
+local Delay_Tab = Window:CreateTab("Delays", 4483362458)
+local Macro_Tab = Window:CreateTab("Auto TP", 4483362458)
+local Rebirth_Tab = Window:CreateTab("Rebirth", 4483362458)
+
+--==================================================
+-- SETTINGS
+--==================================================
+
+local MAX_SLOTS = 150
+local DEFAULT_DELAY = 1
+
+local savedTPs = {}
+local slotDelays = {}
+
+local selectedSlot = 1
+
+local macroRunning = false
+local loopMacro = false
+
+local autoRebirthRunning = false
+local rebirthDelay = 1
+
+for i = 1, MAX_SLOTS do
+    slotDelays[i] = DEFAULT_DELAY
+end
+
+--==================================================
+-- CHARACTER
+--==================================================
+
+local function getCharacter()
+    return LocalPlayer.Character
+end
+
+local function getRoot()
+    local character = getCharacter()
+
+    if not character then
+        return nil
+    end
+
+    return character:FindFirstChild("HumanoidRootPart")
+end
+
+--==================================================
+-- SLOT OPTIONS
+--==================================================
+
+local slotOptions = {}
+
+for i = 1, MAX_SLOTS do
+    table.insert(slotOptions, "TP Slot " .. i)
+end
+
+local function getSlotNumber(option)
+    local value = option
+
+    if type(option) == "table" then
+        value = option[1]
+    end
+
+    return tonumber(string.match(tostring(value), "%d+"))
+end
+
+--==================================================
+-- TELEPORT TAB
+--==================================================
+
+local StatusLabel
+
+local SlotDropdown = TP_Tab:CreateDropdown({
+    Name = "Select TP Slot",
+    Options = slotOptions,
+    CurrentOption = {"TP Slot 1"},
+    MultipleOptions = false,
+    Flag = "SelectedTPSlot",
+
+    Callback = function(option)
+
+        local number = getSlotNumber(option)
+
+        if number then
+            selectedSlot = number
+        end
+
+        if StatusLabel then
+            StatusLabel:Set(
+                "Selected Slot: " .. selectedSlot
+            )
+        end
+
+    end
+})
+
+StatusLabel = TP_Tab:CreateLabel(
+    "Selected Slot: 1 | EMPTY"
+)
+
+local function updateTPStatus()
+
+    if savedTPs[selectedSlot] then
+
+        local position = savedTPs[selectedSlot].Position
+
+        StatusLabel:Set(
+            "Slot "
+            .. selectedSlot
+            .. " | SAVED | X:"
+            .. math.floor(position.X)
+            .. " Y:"
+            .. math.floor(position.Y)
+            .. " Z:"
+            .. math.floor(position.Z)
+        )
+
+    else
+
+        StatusLabel:Set(
+            "Slot "
+            .. selectedSlot
+            .. " | EMPTY"
+        )
+
+    end
+
+end
+
+--==================================================
+-- SAVE CURRENT POSITION
+--==================================================
+
+TP_Tab:CreateButton({
+    Name = "Save Current Position",
+
+    Callback = function()
+
+        local root = getRoot()
+
+        if not root then
+
+            Rayfield:Notify({
+                Title = "Save TP",
+                Content = "HumanoidRootPart not found.",
+                Duration = 3
+            })
+
+            return
+        end
+
+        savedTPs[selectedSlot] = root.CFrame
+
+        updateTPStatus()
+
+        Rayfield:Notify({
+            Title = "TP Saved",
+            Content = "Saved position to Slot " .. selectedSlot,
+            Duration = 2
+        })
+
+    end
+})
+
+--==================================================
+-- TELEPORT TO SELECTED
+--==================================================
+
+TP_Tab:CreateButton({
+    Name = "Teleport To Selected Slot",
+
+    Callback = function()
+
+        local root = getRoot()
+
+        if not root then
+            return
+        end
+
+        if not savedTPs[selectedSlot] then
+
+            Rayfield:Notify({
+                Title = "Teleport",
+                Content = "Slot " .. selectedSlot .. " is empty.",
+                Duration = 2
+            })
+
+            return
+        end
+
+        root.CFrame = savedTPs[selectedSlot]
+
+    end
+})
+
+--==================================================
+-- CLEAR SELECTED
+--==================================================
+
+TP_Tab:CreateButton({
+    Name = "Clear Selecte
